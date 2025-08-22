@@ -1,148 +1,124 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { SignedIn, SignedOut } from '@clerk/clerk-react';
+
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { DashboardPage } from './components/pages/DashboardPage';
 import { ManageFilesPage } from './components/pages/ManageFilesPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { ReportsPage } from './components/pages/ReportsPage';
-import { PlaceholderPage } from './components/pages/PlaceholderPage';
-import { NewFolderModal } from './components/modals/NewFolderModal';
-import { RenameModal } from './components/modals/RenameModal';
-import { ConfirmDeleteModal } from './components/modals/ConfirmDeleteModal';
-import { FilePreviewModal } from './components/modals/FilePreviewModal';
-import { Toast } from './components/ui/Toast';
-import { useFileManagement } from './hooks/useFileManagement';
+import { SettingsPage } from './components/pages/SettingsPage';
+import { NewFolderModal, RenameModal, ConfirmDeleteModal, FilePreviewModal } from './components/modals';
 import { useToast } from './hooks/useToast';
 import { translations } from './locales/translations';
-import { Language, ModalState, PathItem } from './types';
+import { AnyFileItem, Language, ModalState, PathItem } from './types';
+import { SignInPage } from './components/pages/SignInPage';
+import { SignUpPage } from './components/pages/SignUpPage';
+import { useApi } from './services/api';
 
-export default function App() {
+function ProtectedApp() {
   const [language, setLanguage] = useState<Language>('fr');
-  const [currentPage, setCurrentPage] = useState<string>('dashboard');
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
-  const [currentPath, setCurrentPath] = useState<PathItem[]>([{ id: 'root', name: 'Home' }]);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
   const [modalState, setModalState] = useState<ModalState>({ type: null, item: null });
   
-  const { toast, showToast, hideToast } = useToast();
-  const { files, handleFileUpload, handleRenameFile, handleDeleteFile, handleNewFolder } = useFileManagement();
-  
+  const [files, setFiles] = useState<AnyFileItem[]>([]);
+  const [currentPath, setCurrentPath] = useState<PathItem[]>([{ id: null, name: 'Home' }]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const { showToast } = useToast();
+  const { getContents, createFolder, deleteItem, renameItem } = useApi();
   const t = translations[language];
 
-  const openModal = (type: ModalState['type'], item = null) => {
-    setModalState({ type, item });
-  };
+  const openModal = (type: ModalState['type'], item: AnyFileItem | null = null) => setModalState({ type, item });
+  const closeModal = () => setModalState({ type: null, item: null });
 
-  const closeModal = () => {
-    setModalState({ type: null, item: null });
-  };
+  const getCurrentParentId = useCallback(() => {
+    return currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
+  }, [currentPath]);
 
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'dashboard':
-        return (
-          <DashboardPage
-            t={t}
-            onFileUpload={handleFileUpload}
-            files={files}
-            openModal={openModal}
-            showToast={showToast}
-            onDeleteFile={handleDeleteFile}
-          />
-        );
-      case 'manage-files':
-        return (
-          <ManageFilesPage
-            t={t}
-            onFileUpload={handleFileUpload}
-            files={files}
-            onNewFolder={handleNewFolder}
-            onRenameFile={handleRenameFile}
-            currentPath={currentPath}
-            setCurrentPath={setCurrentPath}
-            openModal={openModal}
-          />
-        );
-      case 'users':
-        return <UsersPage t={t} />;
-      case 'reports':
-        return <ReportsPage t={t} />;
-      case 'settings':
-        return <PlaceholderPage title={t.pages.settings} />;
-      default:
-        return (
-          <DashboardPage
-            t={t}
-            onFileUpload={handleFileUpload}
-            files={files}
-            openModal={openModal}
-            showToast={showToast}
-            onDeleteFile={handleDeleteFile}
-          />
-        );
+  const refreshFiles = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const parentId = getCurrentParentId();
+      const contents = await getContents(parentId);
+      setFiles(contents);
+    } catch (error) {
+      console.error("Failed to fetch files:", error);
+      showToast('Failed to load files.', 'error');
+    } finally {
+      setIsLoading(false);
     }
+  }, [getCurrentParentId, getContents, showToast]);
+
+  useEffect(() => {
+    refreshFiles();
+  }, [refreshFiles]);
+
+  const handleNewFolder = async (name: string) => {
+    await createFolder(name, getCurrentParentId());
+    await refreshFiles();
+    closeModal();
+  };
+
+  const handleFileUpload = async (fileList: FileList) => {
+    // ملاحظة: منطق الرفع الفعلي لم يتم بناؤه في الـ Backend بعد
+    showToast(`Uploading ${fileList.length} file(s) is not yet implemented.`, 'info');
+  };
+
+  const handleRenameItem = async (item: AnyFileItem, newName: string) => {
+    await renameItem(item._id, newName, item.itemType);
+    await refreshFiles();
+    closeModal();
+  };
+
+  const handleDeleteItem = async (item: AnyFileItem) => {
+    await deleteItem(item._id, item.itemType);
+    await refreshFiles();
+    closeModal();
   };
 
   return (
     <div dir={t.dir} className="flex h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/50 font-sans overflow-hidden">
-      {/* Background Decorations */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 left-10 w-72 h-72 bg-gradient-to-br from-blue-400/10 to-purple-400/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute top-1/3 right-10 w-96 h-96 bg-gradient-to-br from-emerald-400/10 to-teal-400/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-64 h-64 bg-gradient-to-br from-pink-400/10 to-orange-400/10 rounded-full blur-3xl animate-pulse delay-2000"></div>
-      </div>
-
-      <Sidebar
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        t={t}
-        isCollapsed={isSidebarCollapsed}
-      />
-      
-      <main className="flex-1 flex flex-col relative">
-        <div className="flex-1 p-8 overflow-y-auto">
-          <Header
-            t={t}
-            language={language}
-            setLanguage={setLanguage}
-            toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          />
-          {renderPage()}
+      <Sidebar t={t} isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileSidebarOpen} setIsMobileOpen={setIsMobileSidebarOpen} />
+      <main className="flex-1 flex flex-col relative min-w-0">
+        <div className="flex-1 p-4 md:p-8 overflow-y-auto">
+          <Header t={t} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} toggleMobileSidebar={() => setIsMobileSidebarOpen(true)} language={''} setLanguage={function (lang: string): void {
+            throw new Error('Function not implemented.');
+          } } />
+          <Routes>
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard" element={<DashboardPage t={t} onFileUpload={handleFileUpload} files={files} openModal={openModal} showToast={showToast} />} />
+            <Route path="/manage-files" element={<ManageFilesPage t={t} files={files} isLoading={isLoading} onFileUpload={handleFileUpload} onNewFolder={() => openModal('newFolder')} onRenameFile={(item) => openModal('rename', item)} onDeleteItem={(item) => openModal('delete', item)} onPreviewFile={(item) => openModal('preview', item)} currentPath={currentPath} setCurrentPath={setCurrentPath} />} />
+            <Route path="/users" element={<UsersPage t={t} />} />
+            <Route path="/reports" element={<ReportsPage t={t} />} />
+            <Route path="/settings" element={<SettingsPage t={t} />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
         </div>
-        
-        {/* Modals */}
-        <NewFolderModal
-          isOpen={modalState.type === 'newFolder'}
-          onClose={closeModal}
-          onSubmit={(name) => handleNewFolder(name, currentPath[currentPath.length - 1].id)}
-          t={t}
-        />
-        <RenameModal
-          isOpen={modalState.type === 'rename'}
-          onClose={closeModal}
-          onSubmit={(newName) => handleRenameFile(modalState.item!.id, newName)}
-          t={t}
-          currentName={modalState.item?.name || ''}
-        />
-        <ConfirmDeleteModal
-          isOpen={modalState.type === 'delete'}
-          onClose={closeModal}
-          onConfirm={() => {
-            handleDeleteFile(modalState.item!.id);
-            closeModal();
-          }}
-          t={t}
-          item={modalState.item}
-        />
-        <FilePreviewModal
-          isOpen={modalState.type === 'preview'}
-          onClose={closeModal}
-          t={t}
-          item={modalState.item}
-        />
-        
-        {/* Toast */}
-        <Toast message={toast.message} show={toast.show} onHide={hideToast} />
+        <NewFolderModal isOpen={modalState.type === 'newFolder'} onClose={closeModal} onSubmit={handleNewFolder} t={t} />
+        <RenameModal isOpen={modalState.type === 'rename'} onClose={closeModal} onSubmit={(newName) => modalState.item && handleRenameItem(modalState.item, newName)} t={t} currentName={modalState.item?.name || ''} />
+        <ConfirmDeleteModal isOpen={modalState.type === 'delete'} onClose={closeModal} onConfirm={() => modalState.item && handleDeleteItem(modalState.item)} t={t} item={modalState.item} />
+        <FilePreviewModal isOpen={modalState.type === 'preview'} onClose={closeModal} t={t} item={modalState.item} />
       </main>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <>
+      <SignedOut>
+        <Routes>
+          <Route path="/sign-in" element={<SignInPage />} />
+          <Route path="/sign-up" element={<SignUpPage />} />
+          <Route path="*" element={<Navigate to="/sign-in" replace />} />
+        </Routes>
+      </SignedOut>
+      <SignedIn>
+        <ProtectedApp />
+      </SignedIn>
+    </>
   );
 }

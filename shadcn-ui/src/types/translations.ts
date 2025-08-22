@@ -1,4 +1,5 @@
 export interface TranslationStrings {
+  uploadedOn: string;
   dir: 'ltr' | 'rtl';
   dashboardTitle: string;
   welcomeAdmin: string;
@@ -56,6 +57,7 @@ export interface TranslationStrings {
     text: string;
   };
   sidebar: {
+    [x: string]: string;
     dashboard: string;
     manageFiles: string;
     users: string;
