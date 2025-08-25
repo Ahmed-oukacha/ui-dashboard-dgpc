@@ -9,13 +9,17 @@ import { ManageFilesPage } from './components/pages/ManageFilesPage';
 import { UsersPage } from './components/pages/UsersPage';
 import { ReportsPage } from './components/pages/ReportsPage';
 import { SettingsPage } from './components/pages/SettingsPage';
-import { NewFolderModal, RenameModal, ConfirmDeleteModal, FilePreviewModal } from './components/modals';
+import { NewFolderModal,  } from './components/modals/NewFolderModal';
+import { RenameModal } from './components/modals/RenameModal';
+import { ConfirmDeleteModal } from './components/modals/ConfirmDeleteModal';
+import { FilePreviewModal} from './components/modals/FilePreviewModal'
 import { useToast } from './hooks/useToast';
 import { translations } from './locales/translations';
 import { AnyFileItem, Language, ModalState, PathItem } from './types';
 import { SignInPage } from './components/pages/SignInPage';
 import { SignUpPage } from './components/pages/SignUpPage';
 import { useApi } from './services/api';
+
 
 function ProtectedApp() {
   const [language, setLanguage] = useState<Language>('fr');
@@ -63,7 +67,6 @@ function ProtectedApp() {
   };
 
   const handleFileUpload = async (fileList: FileList) => {
-    // ملاحظة: منطق الرفع الفعلي لم يتم بناؤه في الـ Backend بعد
     showToast(`Uploading ${fileList.length} file(s) is not yet implemented.`, 'info');
   };
 
@@ -84,13 +87,38 @@ function ProtectedApp() {
       <Sidebar t={t} isCollapsed={isSidebarCollapsed} isMobileOpen={isMobileSidebarOpen} setIsMobileOpen={setIsMobileSidebarOpen} />
       <main className="flex-1 flex flex-col relative min-w-0">
         <div className="flex-1 p-4 md:p-8 overflow-y-auto">
-          <Header t={t} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} toggleMobileSidebar={() => setIsMobileSidebarOpen(true)} language={''} setLanguage={function (lang: string): void {
-            throw new Error('Function not implemented.');
-          } } />
+          <Header t={t} toggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)} toggleMobileSidebar={() => setIsMobileSidebarOpen(true)} language={language} setLanguage={setLanguage} />
           <Routes>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<DashboardPage t={t} onFileUpload={handleFileUpload} files={files} openModal={openModal} showToast={showToast} />} />
-            <Route path="/manage-files" element={<ManageFilesPage t={t} files={files} isLoading={isLoading} onFileUpload={handleFileUpload} onNewFolder={() => openModal('newFolder')} onRenameFile={(item) => openModal('rename', item)} onDeleteItem={(item) => openModal('delete', item)} onPreviewFile={(item) => openModal('preview', item)} currentPath={currentPath} setCurrentPath={setCurrentPath} />} />
+            
+            {/* الإصلاح النهائي: 
+              1. لا نمرر 'files' إلى DashboardPage لأنه لا يحتاجها.
+              2. نمرر دالة openModal كما هي لأن تعريفها الأصلي (مع item اختياري) هو الصحيح.
+                 الخطأ لم يكن هنا بل في تعريف الخصائص داخل المكونات نفسها.
+            */}
+            <Route path="/dashboard" element={<DashboardPage t={t} onFileUpload={handleFileUpload} openModal={openModal} showToast={showToast} files={[]} />} />
+            
+            {/* الإصلاح النهائي:
+              1. نمرر كل الخصائص كما هي.
+              2. لا حاجة لتحديد نوع 'item' هنا لأن مكون ManageFilesPage يجب أن يعرف النوع المتوقع.
+                 إذا استمر الخطأ هنا، فهذا يعني أن الخطأ في تعريف خصائص ManageFilesPage نفسها.
+            */}
+            <Route 
+              path="/manage-files" 
+              element={<ManageFilesPage 
+                t={t} 
+                files={files} 
+                isLoading={isLoading} 
+                onFileUpload={handleFileUpload} 
+                onNewFolder={() => openModal('newFolder')} 
+                onRenameFile={(item) => openModal('rename', item)} 
+                onDeleteItem={(item) => openModal('delete', item)} 
+                onPreviewFile={(item) => openModal('preview', item)} 
+                currentPath={currentPath} 
+                setCurrentPath={setCurrentPath} 
+              />} 
+            />
+            
             <Route path="/users" element={<UsersPage t={t} />} />
             <Route path="/reports" element={<ReportsPage t={t} />} />
             <Route path="/settings" element={<SettingsPage t={t} />} />

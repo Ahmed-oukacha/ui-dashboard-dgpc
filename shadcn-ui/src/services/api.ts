@@ -1,11 +1,10 @@
-// أنشئ ملفًا جديدًا هنا
-// filepath: c:\Users\user\Desktop\workspace\shadcn-ui\src\services\api.ts
+// filepath: shadcn-ui/src/services/api.ts
+
 import { useAuth } from '@clerk/clerk-react';
 import { AnyFileItem } from '../types';
 
 const API_URL = 'http://localhost:5001/api';
 
-// دالة مساعدة للحصول على التوكن وإعداد الهيدرز
 const getAuthHeaders = async (getToken: () => Promise<string | null>) => {
     const token = await getToken();
     if (!token) throw new Error("User not authenticated");
@@ -15,7 +14,6 @@ const getAuthHeaders = async (getToken: () => Promise<string | null>) => {
     };
 };
 
-// يمكنك استخدام هذا الـ hook في مكوناتك
 export const useApi = () => {
     const { getToken } = useAuth();
 
@@ -23,7 +21,8 @@ export const useApi = () => {
         const headers = await getAuthHeaders(getToken);
         const response = await fetch(`${API_URL}/dashboard/stats`, { headers });
         if (!response.ok) throw new Error('Failed to fetch stats');
-        return response.json();
+        const data = await response.json();
+        return data;
     };
 
     const getContents = async (parentId: string | null): Promise<AnyFileItem[]> => {
@@ -31,7 +30,8 @@ export const useApi = () => {
         const url = parentId ? `${API_URL}/files?parentId=${parentId}` : `${API_URL}/files`;
         const response = await fetch(url, { headers });
         if (!response.ok) throw new Error('Failed to fetch contents');
-        return response.json();
+        const data = await response.json();
+        return data as AnyFileItem[];
     };
     
     const createFolder = async (name: string, parentId: string | null): Promise<AnyFileItem> => {
@@ -39,7 +39,8 @@ export const useApi = () => {
         const body = JSON.stringify({ name, parentId });
         const response = await fetch(`${API_URL}/files/folders`, { method: 'POST', headers, body });
         if (!response.ok) throw new Error('Failed to create folder');
-        return response.json();
+        const data = await response.json();
+        return data as AnyFileItem;
     };
 
     const deleteItem = async (id: string, type: 'file' | 'folder') => {
@@ -54,8 +55,10 @@ export const useApi = () => {
         const body = JSON.stringify({ name: newName, type: type });
         const response = await fetch(`${API_URL}/files/${id}`, { method: 'PUT', headers, body });
         if (!response.ok) throw new Error('Failed to rename item');
-        return response.json();
+        const data = await response.json();
+        return data as AnyFileItem;
     };
 
+    // الإصلاح النهائي: إضافة "getContents" إلى الكائن المُرجع
     return { getDashboardStats, getContents, createFolder, deleteItem, renameItem };
 };

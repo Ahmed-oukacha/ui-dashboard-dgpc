@@ -2,12 +2,15 @@
   "compilerOptions": {
     "target": "es6",
     "module": "commonjs",
-    "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".", 
+    "paths": {
+      "@services/*": ["../shadcn-ui/src/services/*"]
+    }
   },
-  "include": ["src/**/*", "../shadcn-ui/src/services"]
+  "include": ["src/**/*"]   // فقط backend/src
 }

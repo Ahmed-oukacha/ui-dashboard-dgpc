@@ -1,5 +1,7 @@
 // هذا هو الهيكل الصحيح لأنواع البيانات في مشروعك.
 
+import { ReactNode } from "react";
+
 // الخصائص الأساسية المشتركة بين الملفات والمجلدات
 interface BaseItem {
   _id: string; // المعرف الفريد من قاعدة بيانات MongoDB
@@ -17,6 +19,11 @@ export interface FolderItem extends BaseItem {
 
 // واجهة الملف
 export interface FileItem extends BaseItem {
+  id: string;
+  modified: ReactNode;
+  icon: any;
+  kind: string;
+  parentId: string;
   itemType: 'file';
   size: number;
   type: string; // Mime type e.g., 'image/png'

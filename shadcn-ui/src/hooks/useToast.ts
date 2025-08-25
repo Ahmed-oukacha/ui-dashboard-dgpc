@@ -1,24 +1,36 @@
-import { useState } from 'react';
-import { ToastState } from '../types';
+// filepath: shadcn-ui/src/hooks/useToast.ts
 
+import { toast } from 'sonner';
+
+// تعريف الأنواع الممكنة للـ Toast
+type ToastVariant = 'success' | 'error' | 'info' | 'warning' | 'default';
+
+// هذا هو الـ hook المخصص
 export const useToast = () => {
-  const [toast, setToast] = useState<ToastState>({ show: false, message: '', type: 'info' });
-
-  const showToast = (message: string, type: ToastState['type'] = 'info') => {
-    setToast({ show: true, message, type });
-    // إخفاء الرسالة تلقائيًا بعد 5 ثوانٍ
-    setTimeout(() => {
-      setToast(t => t.show ? { ...t, show: false } : t);
-    }, 5000);
+  
+  // هذه هي الدالة التي ستستخدمها في مكوناتك
+  const showToast = (message: string, variant: ToastVariant = 'default') => {
+    
+    // بناءً على النوع، نستدعي الدالة المناسبة من "sonner"
+    switch (variant) {
+      case 'success':
+        toast.success(message);
+        break;
+      case 'error':
+        toast.error(message);
+        break;
+      case 'info':
+        toast.info(message);
+        break;
+      case 'warning':
+        toast.warning(message);
+        break;
+      default:
+        toast(message);
+        break;
+    }
   };
 
-  const hideToast = () => {
-    setToast({ show: false, message: '', type: 'info' });
-  };
-
-  return {
-    toast,
-    showToast,
-    hideToast
-  };
+  // الـ hook يُرجع الدالة لتتمكن من استخدامها
+  return { showToast };
 };

@@ -1,4 +1,5 @@
 export interface TranslationStrings {
+  dashboard: any;
   uploadedOn: string;
   dir: 'ltr' | 'rtl';
   dashboardTitle: string;
